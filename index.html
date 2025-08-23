@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CAD to GBP Tax Converter</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+    body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 20px;
+    }
+
+    .container {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border-radius: 20px;
+        padding: 40px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        width: 100%;
+        max-width: 500px;
+        transition: all 0.3s ease;
+    }
+
+    .container:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+    }
+
+    h1 {
+        text-align: center;
+        color: #333;
+        margin-bottom: 30px;
+        font-size: 2.2em;
+        font-weight: 700;
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .form-group {
+        margin-bottom: 25px;
+    }
+
+    label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+        color: #555;
+        font-size: 1.1em;
+    }
+
+    input[type="number"] {
+        width: 100%;
+        padding: 15px;
+        border: 2px solid #e1e5e9;
+        border-radius: 12px;
+        font-size: 1.2em;
+        transition: all 0.3s ease;
+        background: #f8f9fa;
+    }
+
+    input[type="number"]:focus {
+        outline: none;
+        border-color: #667eea;
+        background: #fff;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        transform: scale(1.02);
+    }
+
+    .calculation-breakdown {
+        background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+        border-radius: 15px;
+        padding: 25px;
+        margin-top: 20px;
+        border-left: 5px solid #667eea;
+    }
+
+    .calc-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        padding: 8px 0;
+        border-bottom: 1px solid rgba(0,0,0,0.1);
+    }
+
+    .calc-row:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+        font-weight: 700;
+        font-size: 1.3em;
+        color: #667eea;
+        padding-top: 15px;
+        border-top: 2px solid #667eea;
+    }
+
+    .calc-label {
+        font-weight: 500;
+        color: #555;
+    }
+
+    .calc-value {
+        font-weight: 600;
+        color: #333;
+    }
+
+    .error {
+        background: #ffe6e6;
+        color: #d63384;
+        padding: 15px;
+        border-radius: 10px;
+        margin-top: 15px;
+        border-left: 4px solid #d63384;
+    }
+
+    .loading {
+        text-align: center;
+        color: #667eea;
+        font-style: italic;
+        padding: 15px;
+    }
+
+    .exchange-rate-info {
+        text-align: center;
+        font-size: 0.9em;
+        color: #666;
+        margin-top: 15px;
+        font-style: italic;
+    }
+
+    .currency-symbol {
+        font-weight: bold;
+        color: #667eea;
+    }
+
+    @keyframes pulse {
+        0% { opacity: 0.7; }
+        50% { opacity: 1; }
+        100% { opacity: 0.7; }
+    }
+
+    .loading {
+        animation: pulse 1.5s ease-in-out infinite;
+    }
+    </style>
+
+</head>
+<body>
+    <div class="container">
+        <h1>CAD to GBP Tax Converter</h1>
+
+    <div class="form-group">
+        <label for="cadAmount">Amount in CAD ($)</label>
+        <input type="number" id="cadAmount" step="0.01" min="0" placeholder="Enter amount in Canadian Dollars">
+    </div>
+
+    <div class="form-group" id="manualRateGroup" style="display: none;">
+        <label for="manualRate">Manual Exchange Rate (1 CAD = ? GBP)</label>
+        <input type="number" id="manualRate" step="0.0001" min="0" placeholder="e.g., 0.5890">
+        <div style="font-size: 0.9em; color: #666; margin-top: 5px;">
+            Enter the exchange rate if automatic fetching fails
+        </div>
+    </div>
+
+    <div id="results" class="calculation-breakdown" style="display: none;">
+        <div class="calc-row">
+            <span class="calc-label">Original Amount:</span>
+            <span class="calc-value"><span class="currency-symbol">$</span><span id="originalAmount">0.00</span> CAD</span>
+        </div>
+        <div class="calc-row">
+            <span class="calc-label">Tax (13%):</span>
+            <span class="calc-value"><span class="currency-symbol">$</span><span id="taxAmount">0.00</span> CAD</span>
+        </div>
+        <div class="calc-row">
+            <span class="calc-label">Total with Tax:</span>
+            <span class="calc-value"><span class="currency-symbol">$</span><span id="totalCAD">0.00</span> CAD</span>
+        </div>
+        <div class="calc-row">
+            <span class="calc-label">Amount in GBP:</span>
+            <span class="calc-value"><span class="currency-symbol">£</span><span id="gbpAmount">0.00</span> GBP</span>
+        </div>
+    </div>
+
+    <div id="loading" class="loading" style="display: none;">
+        Fetching current exchange rates...
+    </div>
+
+    <div id="error" class="error" style="display: none;"></div>
+
+    <div id="exchangeRateInfo" class="exchange-rate-info" style="display: none;">
+        Exchange rate: <span id="exchangeRate">-</span> (CAD to GBP)
+    </div>
+
+    <div id="manualRatePrompt" class="error" style="display: none;">
+        Unable to fetch live exchange rates. Please enter the exchange rate manually above to continue with calculations.
+    </div>
+</div>
+
+<script>
+    let currentExchangeRate = null;
+    let lastFetchTime = null;
+    let usingManualRate = false;
+    const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+    const cadInput = document.getElementById('cadAmount');
+    const manualRateInput = document.getElementById('manualRate');
+    const manualRateGroup = document.getElementById('manualRateGroup');
+    const manualRatePrompt = document.getElementById('manualRatePrompt');
+    const resultsDiv = document.getElementById('results');
+    const loadingDiv = document.getElementById('loading');
+    const errorDiv = document.getElementById('error');
+    const exchangeRateInfo = document.getElementById('exchangeRateInfo');
+
+    // Elements for displaying calculated values
+    const originalAmountSpan = document.getElementById('originalAmount');
+    const taxAmountSpan = document.getElementById('taxAmount');
+    const totalCADSpan = document.getElementById('totalCAD');
+    const gbpAmountSpan = document.getElementById('gbpAmount');
+    const exchangeRateSpan = document.getElementById('exchangeRate');
+
+    async function fetchExchangeRate() {
+        try {
+            loadingDiv.style.display = 'block';
+            errorDiv.style.display = 'none';
+            manualRatePrompt.style.display = 'none';
+            
+            const response = await fetch('https://api.exchangerate-api.com/v4/latest/CAD');
+            
+            if (!response.ok) {
+                throw new Error('Failed to fetch exchange rate');
+            }
+            
+            const data = await response.json();
+            currentExchangeRate = data.rates.GBP;
+            lastFetchTime = Date.now();
+            usingManualRate = false;
+            
+            exchangeRateSpan.textContent = `1 CAD = ${currentExchangeRate.toFixed(4)} GBP`;
+            exchangeRateInfo.style.display = 'block';
+            
+            // Hide manual rate input since we got live data
+            manualRateGroup.style.display = 'none';
+            
+            loadingDiv.style.display = 'none';
+            return currentExchangeRate;
+        } catch (error) {
+            loadingDiv.style.display = 'none';
+            errorDiv.style.display = 'none'; // Don't show general error, show manual rate prompt instead
+            
+            // Show manual rate input and prompt
+            manualRateGroup.style.display = 'block';
+            manualRatePrompt.style.display = 'block';
+            exchangeRateInfo.style.display = 'none';
+            
+            return null;
+        }
+    }
+
+    async function getExchangeRate() {
+        // Check if user has entered a manual rate
+        const manualRate = parseFloat(manualRateInput.value);
+        if (manualRate && manualRate > 0) {
+            currentExchangeRate = manualRate;
+            usingManualRate = true;
+            exchangeRateSpan.textContent = `1 CAD = ${currentExchangeRate.toFixed(4)} GBP (manual)`;
+            exchangeRateInfo.style.display = 'block';
+            manualRatePrompt.style.display = 'none';
+            return currentExchangeRate;
+        }
+        
+        // If we have a cached rate that's still fresh and not using manual
+        if (currentExchangeRate && !usingManualRate && lastFetchTime && (Date.now() - lastFetchTime < CACHE_DURATION)) {
+            return currentExchangeRate;
+        }
+        
+        // Try to fetch live rate
+        const fetchedRate = await fetchExchangeRate();
+        if (fetchedRate) {
+            return fetchedRate;
+        }
+        
+        // If fetch failed and no manual rate, return null
+        return null;
+    }
+
+    function formatNumber(num) {
+        return num.toLocaleString('en-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    async function calculateAndDisplay() {
+        const cadAmount = parseFloat(cadInput.value);
+        
+        if (!cadAmount || cadAmount <= 0) {
+            resultsDiv.style.display = 'none';
+            return;
+        }
+
+        const exchangeRate = await getExchangeRate();
+        
+        if (!exchangeRate) {
+            resultsDiv.style.display = 'none';
+            return;
+        }
+
+        // Calculate tax and total
+        const taxAmount = cadAmount * 0.13;
+        const totalCAD = cadAmount + taxAmount;
+        const gbpAmount = totalCAD * exchangeRate;
+
+        // Display results
+        originalAmountSpan.textContent = formatNumber(cadAmount);
+        taxAmountSpan.textContent = formatNumber(taxAmount);
+        totalCADSpan.textContent = formatNumber(totalCAD);
+        gbpAmountSpan.textContent = formatNumber(gbpAmount);
+
+        resultsDiv.style.display = 'block';
+        errorDiv.style.display = 'none';
+    }
+
+    // Add event listeners for real-time calculation
+    cadInput.addEventListener('input', calculateAndDisplay);
+    manualRateInput.addEventListener('input', calculateAndDisplay);
+
+    // Initialize with exchange rate fetch
+    fetchExchangeRate();
+</script>
+
+</body>
+</html>
