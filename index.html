@@ -11,6 +11,7 @@
             padding: 0;
             box-sizing: border-box;
         }
+
     body {
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -77,6 +78,19 @@
         background: #fff;
         box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         transform: scale(1.02);
+    }
+
+    input[type="checkbox"] {
+        margin-right: 10px;
+        transform: scale(1.2);
+    }
+
+    .checkbox-label {
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+        font-weight: 500;
+        color: #555;
     }
 
     .calculation-breakdown {
@@ -154,16 +168,24 @@
     .loading {
         animation: pulse 1.5s ease-in-out infinite;
     }
-    </style>
+</style>
 
 </head>
 <body>
     <div class="container">
         <h1>CAD to GBP Tax Converter</h1>
 
+
     <div class="form-group">
         <label for="cadAmount">Amount in CAD ($)</label>
         <input type="number" id="cadAmount" step="0.01" min="0" placeholder="Enter amount in Canadian Dollars">
+    </div>
+
+    <div class="form-group">
+        <label class="checkbox-label">
+            <input type="checkbox" id="includeTax" checked>
+            <span>Include 13% tax before conversion</span>
+        </label>
     </div>
 
     <div class="form-group" id="manualRateGroup" style="display: none;">
@@ -179,11 +201,11 @@
             <span class="calc-label">Original Amount:</span>
             <span class="calc-value"><span class="currency-symbol">$</span><span id="originalAmount">0.00</span> CAD</span>
         </div>
-        <div class="calc-row">
+        <div class="calc-row" id="taxRow">
             <span class="calc-label">Tax (13%):</span>
             <span class="calc-value"><span class="currency-symbol">$</span><span id="taxAmount">0.00</span> CAD</span>
         </div>
-        <div class="calc-row">
+        <div class="calc-row" id="totalCADRow">
             <span class="calc-label">Total with Tax:</span>
             <span class="calc-value"><span class="currency-symbol">$</span><span id="totalCAD">0.00</span> CAD</span>
         </div>
@@ -216,6 +238,7 @@
 
     const cadInput = document.getElementById('cadAmount');
     const manualRateInput = document.getElementById('manualRate');
+    const includeTaxCheckbox = document.getElementById('includeTax');
     const manualRateGroup = document.getElementById('manualRateGroup');
     const manualRatePrompt = document.getElementById('manualRatePrompt');
     const resultsDiv = document.getElementById('results');
@@ -229,6 +252,8 @@
     const totalCADSpan = document.getElementById('totalCAD');
     const gbpAmountSpan = document.getElementById('gbpAmount');
     const exchangeRateSpan = document.getElementById('exchangeRate');
+    const taxRow = document.getElementById('taxRow');
+    const totalCADRow = document.getElementById('totalCADRow');
 
     async function fetchExchangeRate() {
         try {
@@ -314,10 +339,29 @@
             return;
         }
 
-        // Calculate tax and total
-        const taxAmount = cadAmount * 0.13;
-        const totalCAD = cadAmount + taxAmount;
-        const gbpAmount = totalCAD * exchangeRate;
+        const includeTax = includeTaxCheckbox.checked;
+
+        // Calculate based on tax preference
+        let taxAmount = 0;
+        let totalCAD = cadAmount;
+        let gbpAmount = 0;
+
+        if (includeTax) {
+            taxAmount = cadAmount * 0.13;
+            totalCAD = cadAmount + taxAmount;
+            gbpAmount = totalCAD * exchangeRate;
+            
+            // Show tax-related rows
+            taxRow.style.display = 'flex';
+            totalCADRow.querySelector('.calc-label').textContent = 'Total with Tax:';
+        } else {
+            gbpAmount = cadAmount * exchangeRate;
+            
+            // Hide tax row but keep total row for consistency
+            taxRow.style.display = 'none';
+            totalCADRow.querySelector('.calc-label').textContent = 'Amount to Convert:';
+            totalCAD = cadAmount; // For display purposes
+        }
 
         // Display results
         originalAmountSpan.textContent = formatNumber(cadAmount);
@@ -332,6 +376,7 @@
     // Add event listeners for real-time calculation
     cadInput.addEventListener('input', calculateAndDisplay);
     manualRateInput.addEventListener('input', calculateAndDisplay);
+    includeTaxCheckbox.addEventListener('change', calculateAndDisplay);
 
     // Initialize with exchange rate fetch
     fetchExchangeRate();
