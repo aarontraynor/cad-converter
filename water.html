@@ -4,9 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>La Marzocco Water Calculator</title>
+    <!-- Load Tesseract.js for reading text from images -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <style>
         :root {
-            --primary: #4a3b32; /* Espresso brown */
+            --primary: #4a3b32;
             --bg: #faf8f5;
             --card-bg: #ffffff;
             --success: #d4edda;
@@ -14,6 +16,8 @@
             --danger: #f8d7da;
             --danger-text: #721c24;
             --border: #e2e8f0;
+            --info: #cce5ff;
+            --info-text: #004085;
         }
         
         body {
@@ -59,6 +63,7 @@
             border-radius: 12px;
             padding: 25px;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            margin-bottom: 20px;
         }
 
         h2 {
@@ -84,7 +89,7 @@
             position: relative;
         }
 
-        input {
+        input[type="number"] {
             width: 100%;
             padding: 10px 12px;
             border: 1px solid #cbd5e1;
@@ -94,7 +99,7 @@
             transition: border-color 0.2s;
         }
 
-        input:focus {
+        input[type="number"]:focus {
             outline: none;
             border-color: var(--primary);
             box-shadow: 0 0 0 3px rgba(74, 59, 50, 0.1);
@@ -110,7 +115,8 @@
             pointer-events: none;
         }
 
-        button {
+        button, .file-upload-btn {
+            display: inline-block;
             width: 100%;
             background-color: var(--primary);
             color: white;
@@ -122,10 +128,44 @@
             cursor: pointer;
             transition: background-color 0.2s;
             margin-top: 10px;
+            text-align: center;
+            box-sizing: border-box;
         }
 
-        button:hover {
+        button:hover, .file-upload-btn:hover {
             background-color: #352a23;
+        }
+
+        .file-upload-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+            width: 100%;
+        }
+
+        .file-upload-wrapper input[type=file] {
+            font-size: 100px;
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            cursor: pointer;
+            height: 100%;
+        }
+
+        .status-box {
+            padding: 10px;
+            border-radius: 6px;
+            margin-top: 15px;
+            font-size: 0.9rem;
+            text-align: center;
+            display: none;
+        }
+
+        .status-box.active {
+            display: block;
+            background-color: var(--info);
+            color: var(--info-text);
         }
 
         .result-item {
@@ -196,12 +236,27 @@
 
 <div class="container">
     <h1>La Marzocco Water Calculator</h1>
-    <p class="subtitle">Enter the values from your bottled water label to see if it's safe for your Linea Mini R.</p>
+    <p class="subtitle">Scan a label or enter values manually to check if it's safe for your Linea Mini R.</p>
+
+    <!-- Scan Image Section -->
+    <div class="card">
+        <h2>📷 Scan Bottle Label</h2>
+        <p style="font-size: 0.9rem; color: #666; margin-top: 0;">Upload a clear photo of the mineral composition to automatically fill the values below.</p>
+        
+        <div class="file-upload-wrapper">
+            <div class="file-upload-btn">Choose Image / Take Photo</div>
+            <input type="file" id="imageInput" accept="image/*" onchange="processImage()">
+        </div>
+        
+        <div id="statusMessage" class="status-box">
+            Analyzing image... this usually takes 3 to 5 seconds.
+        </div>
+    </div>
 
     <div class="grid">
         <!-- Input Section -->
         <div class="card">
-            <h2>1. Enter Label Values</h2>
+            <h2>1. Label Values</h2>
             
             <div class="form-group">
                 <label for="calcium">Calcium (Ca)</label>
@@ -258,7 +313,7 @@
             <h2>2. Machine Analysis</h2>
             <div id="results-container">
                 <div class="empty-state">
-                    Enter values and click evaluate to see the results.
+                    Enter values or scan an image to evaluate.
                 </div>
             </div>
         </div>
@@ -266,8 +321,65 @@
 </div>
 
 <script>
+    // --- OCR Image Processing Logic ---
+    async function processImage() {
+        const fileInput = document.getElementById('imageInput');
+        const statusBox = document.getElementById('statusMessage');
+        const file = fileInput.files[0];
+
+        if (!file) return;
+
+        // Show status message
+        statusBox.classList.add('active');
+        statusBox.innerText = "Analyzing image... this may take a few seconds.";
+
+        try {
+            // Run Tesseract OCR on the image
+            const result = await Tesseract.recognize(file, 'eng');
+            const text = result.data.text.toLowerCase();
+            
+            console.log("Extracted Text:\n", text); // Helpful for debugging if a label fails
+
+            // Regex patterns to find the mineral name, ignore random characters, and grab the first decimal number
+            const regexCa = /calcium[^\d]*([\d\.]+)/;
+            const regexMg = /magnesium[^\d]*([\d\.]+)/;
+            const regexHco3 = /(?:bicarbonate|hco3)[^\d]*([\d\.]+)/;
+            const regexCl = /chloride[^\d]*([\d\.]+)/;
+            const regexTds = /(?:dry residue|tds)[^\d]*([\d\.]+)/;
+            const regexPh = /ph[^\d]*([\d\.]+)/;
+
+            // Helper function to extract and clean matches
+            const extractValue = (pattern) => {
+                const match = text.match(pattern);
+                // Ensure we don't accidentally grab a stray period; requires a valid float.
+                if (match && !isNaN(parseFloat(match[1]))) {
+                    return parseFloat(match[1]);
+                }
+                return '';
+            };
+
+            // Populate the input fields
+            document.getElementById('calcium').value = extractValue(regexCa);
+            document.getElementById('magnesium').value = extractValue(regexMg);
+            document.getElementById('bicarbonate').value = extractValue(regexHco3);
+            document.getElementById('chloride').value = extractValue(regexCl);
+            document.getElementById('tds').value = extractValue(regexTds);
+            document.getElementById('ph').value = extractValue(regexPh);
+
+            // Update status and automatically run the math
+            statusBox.innerText = "Scan complete! Review the extracted numbers below.";
+            setTimeout(() => { statusBox.classList.remove('active'); }, 5000);
+            
+            calculate();
+
+        } catch (error) {
+            console.error(error);
+            statusBox.innerText = "Error analyzing image. Please try entering manually.";
+        }
+    }
+
+    // --- Calculator Logic ---
     function calculate() {
-        // Fetch values
         const ca = parseFloat(document.getElementById('calcium').value) || 0;
         const mg = parseFloat(document.getElementById('magnesium').value) || 0;
         const hco3 = parseFloat(document.getElementById('bicarbonate').value) || 0;
@@ -275,58 +387,17 @@
         const tds = parseFloat(document.getElementById('tds').value) || 0;
         const ph = parseFloat(document.getElementById('ph').value) || 0;
 
-        // Perform Calculations
-        // Hardness as CaCO3 = (2.5 * Ca) + (4.1 * Mg)
         const hardness = (2.5 * ca) + (4.1 * mg);
-        
-        // Alkalinity as CaCO3 = Bicarbonate * (50/61) ≈ Bicarbonate * 0.82
         const alkalinity = hco3 * 0.82;
 
-        // Define checks based on La Marzocco targets
         const parameters = [
-            { 
-                name: "Total Hardness", 
-                value: hardness, 
-                min: 35, 
-                max: 85, 
-                unit: "ppm", 
-                targetText: "35 - 85" 
-            },
-            { 
-                name: "Total Alkalinity", 
-                value: alkalinity, 
-                min: 40, 
-                max: 80, 
-                unit: "ppm", 
-                targetText: "40 - 80" 
-            },
-            { 
-                name: "Chlorides", 
-                value: cl, 
-                min: 0, 
-                max: 29.99, 
-                unit: "ppm", 
-                targetText: "< 30" 
-            },
-            { 
-                name: "TDS / Dry Residue", 
-                value: tds, 
-                min: 75, 
-                max: 150, 
-                unit: "ppm", 
-                targetText: "75 - 150" 
-            },
-            { 
-                name: "pH Level", 
-                value: ph, 
-                min: 6.5, 
-                max: 8.0, 
-                unit: "", 
-                targetText: "6.5 - 8.0" 
-            }
+            { name: "Total Hardness", value: hardness, min: 35, max: 85, unit: "ppm", targetText: "35 - 85" },
+            { name: "Total Alkalinity", value: alkalinity, min: 40, max: 80, unit: "ppm", targetText: "40 - 80" },
+            { name: "Chlorides", value: cl, min: 0, max: 29.99, unit: "ppm", targetText: "< 30" },
+            { name: "TDS / Dry Residue", value: tds, min: 75, max: 150, unit: "ppm", targetText: "75 - 150" },
+            { name: "pH Level", value: ph, min: 6.5, max: 8.0, unit: "", targetText: "6.5 - 8.0" }
         ];
 
-        // Generate HTML
         let html = '';
         let hasInput = ca || mg || hco3 || cl || tds || ph;
 
@@ -337,10 +408,8 @@
         }
 
         parameters.forEach(p => {
-            // Check if value is within range
             let isGood = p.value >= p.min && p.value <= p.max;
             
-            // Special handling for missing inputs (so we don't red-flag things not entered yet)
             if (p.value === 0 && p.name !== "Chlorides") {
                 html += `
                 <div class="result-item">
@@ -375,6 +444,5 @@
         document.getElementById('results-container').innerHTML = html;
     }
 </script>
-
 </body>
 </html>
