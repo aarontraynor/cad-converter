@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>La Marzocco Water Calculator</title>
+    <style>
+        :root {
+            --primary: #4a3b32; /* Espresso brown */
+            --bg: #faf8f5;
+            --card-bg: #ffffff;
+            --success: #d4edda;
+            --success-text: #155724;
+            --danger: #f8d7da;
+            --danger-text: #721c24;
+            --border: #e2e8f0;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            color: #333;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--primary);
+            margin-bottom: 5px;
+        }
+
+        p.subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        @media(min-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        h2 {
+            font-size: 1.25rem;
+            margin-top: 0;
+            margin-bottom: 20px;
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 5px;
+            font-size: 0.95rem;
+        }
+
+        .input-wrapper {
+            position: relative;
+        }
+
+        input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            font-size: 1rem;
+            box-sizing: border-box;
+            transition: border-color 0.2s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(74, 59, 50, 0.1);
+        }
+
+        .unit {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+            font-size: 0.9rem;
+            pointer-events: none;
+        }
+
+        button {
+            width: 100%;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background-color: #352a23;
+        }
+
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .result-item:last-child {
+            border-bottom: none;
+        }
+
+        .result-label strong {
+            display: block;
+            font-size: 1.05rem;
+        }
+
+        .result-label span {
+            font-size: 0.85rem;
+            color: #64748b;
+        }
+
+        .result-value {
+            text-align: right;
+        }
+
+        .result-value .number {
+            font-size: 1.2rem;
+            font-weight: bold;
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .badge.good {
+            background-color: var(--success);
+            color: var(--success-text);
+        }
+
+        .badge.bad {
+            background-color: var(--danger);
+            color: var(--danger-text);
+        }
+        
+        .badge.pending {
+            background-color: #e2e8f0;
+            color: #475569;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: #64748b;
+            padding: 40px 0;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>La Marzocco Water Calculator</h1>
+    <p class="subtitle">Enter the values from your bottled water label to see if it's safe for your Linea Mini R.</p>
+
+    <div class="grid">
+        <!-- Input Section -->
+        <div class="card">
+            <h2>1. Enter Label Values</h2>
+            
+            <div class="form-group">
+                <label for="calcium">Calcium (Ca)</label>
+                <div class="input-wrapper">
+                    <input type="number" id="calcium" step="0.1" placeholder="e.g. 17.0">
+                    <span class="unit">mg/L</span>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="magnesium">Magnesium (Mg)</label>
+                <div class="input-wrapper">
+                    <input type="number" id="magnesium" step="0.1" placeholder="e.g. 5.0">
+                    <span class="unit">mg/L</span>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="bicarbonate">Bicarbonate (HCO3)</label>
+                <div class="input-wrapper">
+                    <input type="number" id="bicarbonate" step="0.1" placeholder="e.g. 46.0">
+                    <span class="unit">mg/L</span>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="chloride">Chloride (Cl)</label>
+                <div class="input-wrapper">
+                    <input type="number" id="chloride" step="0.1" placeholder="e.g. 13.0">
+                    <span class="unit">mg/L</span>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="tds">Dry Residue / TDS</label>
+                <div class="input-wrapper">
+                    <input type="number" id="tds" step="0.1" placeholder="e.g. 120.0">
+                    <span class="unit">mg/L</span>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="ph">pH (at source)</label>
+                <div class="input-wrapper">
+                    <input type="number" id="ph" step="0.1" placeholder="e.g. 6.7">
+                </div>
+            </div>
+
+            <button onclick="calculate()">Evaluate Water Profile</button>
+        </div>
+
+        <!-- Output Section -->
+        <div class="card">
+            <h2>2. Machine Analysis</h2>
+            <div id="results-container">
+                <div class="empty-state">
+                    Enter values and click evaluate to see the results.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function calculate() {
+        // Fetch values
+        const ca = parseFloat(document.getElementById('calcium').value) || 0;
+        const mg = parseFloat(document.getElementById('magnesium').value) || 0;
+        const hco3 = parseFloat(document.getElementById('bicarbonate').value) || 0;
+        const cl = parseFloat(document.getElementById('chloride').value) || 0;
+        const tds = parseFloat(document.getElementById('tds').value) || 0;
+        const ph = parseFloat(document.getElementById('ph').value) || 0;
+
+        // Perform Calculations
+        // Hardness as CaCO3 = (2.5 * Ca) + (4.1 * Mg)
+        const hardness = (2.5 * ca) + (4.1 * mg);
+        
+        // Alkalinity as CaCO3 = Bicarbonate * (50/61) ≈ Bicarbonate * 0.82
+        const alkalinity = hco3 * 0.82;
+
+        // Define checks based on La Marzocco targets
+        const parameters = [
+            { 
+                name: "Total Hardness", 
+                value: hardness, 
+                min: 35, 
+                max: 85, 
+                unit: "ppm", 
+                targetText: "35 - 85" 
+            },
+            { 
+                name: "Total Alkalinity", 
+                value: alkalinity, 
+                min: 40, 
+                max: 80, 
+                unit: "ppm", 
+                targetText: "40 - 80" 
+            },
+            { 
+                name: "Chlorides", 
+                value: cl, 
+                min: 0, 
+                max: 29.99, 
+                unit: "ppm", 
+                targetText: "< 30" 
+            },
+            { 
+                name: "TDS / Dry Residue", 
+                value: tds, 
+                min: 75, 
+                max: 150, 
+                unit: "ppm", 
+                targetText: "75 - 150" 
+            },
+            { 
+                name: "pH Level", 
+                value: ph, 
+                min: 6.5, 
+                max: 8.0, 
+                unit: "", 
+                targetText: "6.5 - 8.0" 
+            }
+        ];
+
+        // Generate HTML
+        let html = '';
+        let hasInput = ca || mg || hco3 || cl || tds || ph;
+
+        if (!hasInput) {
+            document.getElementById('results-container').innerHTML = 
+                '<div class="empty-state">Please enter at least one value to evaluate.</div>';
+            return;
+        }
+
+        parameters.forEach(p => {
+            // Check if value is within range
+            let isGood = p.value >= p.min && p.value <= p.max;
+            
+            // Special handling for missing inputs (so we don't red-flag things not entered yet)
+            if (p.value === 0 && p.name !== "Chlorides") {
+                html += `
+                <div class="result-item">
+                    <div class="result-label">
+                        <strong>${p.name}</strong>
+                        <span>Target: ${p.targetText} ${p.unit}</span>
+                    </div>
+                    <div class="result-value">
+                        <span class="number">--</span>
+                        <span class="badge pending">Awaiting Input</span>
+                    </div>
+                </div>`;
+                return;
+            }
+
+            const statusClass = isGood ? 'good' : 'bad';
+            const statusText = isGood ? 'In Range' : 'Out of Range';
+
+            html += `
+            <div class="result-item">
+                <div class="result-label">
+                    <strong>${p.name}</strong>
+                    <span>Target: ${p.targetText} ${p.unit}</span>
+                </div>
+                <div class="result-value">
+                    <span class="number">${p.value.toFixed(1)} ${p.unit}</span>
+                    <span class="badge ${statusClass}">${statusText}</span>
+                </div>
+            </div>`;
+        });
+
+        document.getElementById('results-container').innerHTML = html;
+    }
+</script>
+
+</body>
+</html>
