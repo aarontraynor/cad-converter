@@ -281,7 +281,21 @@
         
         <div id="scoreboard-list" class="scoreboard"></div>
         
-        <button class="btn-outline mt-4" onclick="startNewGame()">Start New Game (Clear Data)</button>
+        <button class="btn-outline-gray mt-4" onclick="openNewGameModal()">Start New Game...</button>
+    </div>
+
+    <!-- New Game Option Modal -->
+    <div id="new-game-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h2 style="margin-bottom: 0.5rem; text-align: center;">Start New Game</h2>
+            <p style="text-align: center; color: var(--text-muted); margin-bottom: 1.5rem;">Would you like to keep the current players or start fresh?</p>
+            
+            <div class="btn-grid" style="grid-template-columns: 1fr; gap: 0.75rem;">
+                <button class="btn-primary" onclick="confirmNewGame(true)">Keep Current Players</button>
+                <button class="btn-outline" onclick="confirmNewGame(false)">Clear All Players</button>
+                <button class="btn-outline-gray" style="margin-top: 0.5rem;" onclick="closeNewGameModal()">Cancel</button>
+            </div>
+        </div>
     </div>
 
     <!-- Calculator Modal -->
@@ -375,16 +389,33 @@
         // Load data immediately on page load
         window.onload = loadGameState;
 
-        function startNewGame() {
-            if (confirm("Are you sure you want to clear all data and start a new game? This cannot be undone.")) {
+        // --- New Game Logic ---
+        function openNewGameModal() {
+            document.getElementById('new-game-modal').classList.add('active');
+        }
+
+        function closeNewGameModal() {
+            document.getElementById('new-game-modal').classList.remove('active');
+        }
+
+        function confirmNewGame(keepPlayers) {
+            if (keepPlayers) {
+                // Keep players but wipe their scores
+                players.forEach(p => p.scores = []);
+            } else {
+                // Wipe everything
                 localStorage.removeItem('flip7GameCache');
                 players = [];
                 nextPlayerId = 1;
-                
-                document.getElementById('game-screen').classList.add('hidden');
-                document.getElementById('setup-screen').classList.remove('hidden');
-                renderSetupList();
             }
+            
+            // In both cases, return to the setup screen so they can review/edit before starting
+            document.getElementById('game-screen').classList.add('hidden');
+            document.getElementById('setup-screen').classList.remove('hidden');
+            
+            renderSetupList();
+            saveGameState();
+            closeNewGameModal();
         }
         // ----------------------------------------
 
