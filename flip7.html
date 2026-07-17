@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Flip 7 Scorekeeper</title>
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --bg: #f3f4f6;
+            --card-bg: #ffffff;
+            --text-main: #1f2937;
+            --text-muted: #6b7280;
+            --bust-color: #ef4444;
+            --num-bg: #e0e7ff;
+            --num-active: #4f46e5;
+            --mod-bg: #d1fae5;
+            --mod-active: #059669;
+            --x2-bg: #fef08a;
+            --x2-active: #ca8a04;
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-main);
+            padding: 1rem;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        h1, h2, h3 { text-align: center; margin-bottom: 1rem; }
+        
+        .header-title {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: var(--text-main);
+        }
+
+        .container {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            margin-bottom: 1rem;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 1rem;
+            margin-bottom: 0.5rem;
+            outline: none;
+        }
+        
+        input[type="text"]:focus { border-color: var(--primary); }
+
+        button {
+            width: 100%;
+            padding: 0.75rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: opacity 0.2s, transform 0.1s;
+        }
+
+        button:active { transform: scale(0.98); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+        .btn-primary { background-color: var(--primary); color: white; }
+        .btn-outline { background-color: transparent; border: 2px solid var(--text-muted); color: var(--text-muted); }
+
+        .player-list { list-style: none; margin: 1rem 0; }
+        .player-list li {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #e5e7eb;
+            font-size: 1.1rem;
+            font-weight: 500;
+        }
+
+        .remove-btn {
+            background: none;
+            color: var(--bust-color);
+            border: none;
+            width: auto;
+            padding: 0.25rem 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        /* Scoreboard */
+        .scoreboard {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+
+        .player-card {
+            background-color: var(--card-bg);
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 1.25rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            transition: transform 0.1s, border-color 0.2s;
+        }
+
+        .player-card:active {
+            transform: scale(0.96);
+            border-color: var(--primary);
+        }
+
+        .player-info { display: flex; flex-direction: column; }
+        .player-name { font-size: 1.25rem; font-weight: bold; margin-bottom: 0.25rem; }
+        .player-score { font-size: 2.2rem; font-weight: 800; color: var(--primary); line-height: 1; }
+        
+        .score-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            align-items: flex-end;
+        }
+
+        .tap-hint {
+            font-size: 0.85rem;
+            color: white;
+            background-color: var(--primary);
+            padding: 0.4rem 0.8rem;
+            border-radius: 99px;
+            font-weight: 600;
+        }
+        
+        .undo-btn {
+            background: none;
+            color: var(--text-muted);
+            border: none;
+            font-size: 0.8rem;
+            padding: 0;
+            text-decoration: underline;
+            width: auto;
+        }
+
+        /* Modal / Calculator */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: rgba(0,0,0,0.6);
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+        }
+
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+
+        .modal-content {
+            background-color: var(--card-bg);
+            width: 100%;
+            max-width: 500px;
+            border-radius: 20px 20px 0 0;
+            padding: 1.5rem;
+            max-height: 95vh;
+            overflow-y: auto;
+            transform: translateY(100%);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .modal-overlay.active .modal-content { transform: translateY(0); }
+
+        .calc-section { margin-bottom: 1.5rem; }
+        .calc-section h4 {
+            margin-bottom: 0.75rem;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .btn-grid {
+            display: grid;
+            gap: 0.5rem;
+        }
+
+        .toggle-btn {
+            padding: 0.85rem 0;
+            border-radius: 8px;
+            font-size: 1.25rem;
+            font-weight: bold;
+            border: 2px solid transparent;
+            background-color: #f3f4f6;
+            color: var(--text-main);
+            transition: all 0.1s;
+        }
+
+        .toggle-btn.num-btn { background-color: var(--num-bg); color: var(--text-main); }
+        .toggle-btn.num-btn.active { background-color: var(--num-active); color: white; }
+        .toggle-btn.mod-btn { background-color: var(--mod-bg); color: var(--text-main); }
+        .toggle-btn.mod-btn.active { background-color: var(--mod-active); color: white; }
+        .toggle-btn.x2-btn { background-color: var(--x2-bg); color: var(--text-main); }
+        .toggle-btn.x2-btn.active { background-color: var(--x2-active); color: white; }
+
+        .bust-btn {
+            background-color: white;
+            border: 2px solid var(--bust-color);
+            color: var(--bust-color);
+            margin-bottom: 1rem;
+            padding: 1rem;
+            font-size: 1.2rem;
+        }
+        .bust-btn.active { background-color: var(--bust-color); color: white; }
+
+        .math-breakdown {
+            background-color: var(--bg);
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            font-size: 0.95rem;
+            min-height: 80px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        
+        .math-breakdown div { margin-bottom: 0.35rem; }
+        .math-breakdown b { color: var(--primary); font-size: 1.1rem;}
+
+        .modal-actions {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+        .modal-actions button { padding: 1rem; }
+
+        /* Utilities */
+        .hidden { display: none !important; }
+        .text-center { text-align: center; }
+        .mt-4 { margin-top: 1.5rem; }
+    </style>
+</head>
+<body>
+
+    <!-- Setup Screen -->
+    <div id="setup-screen" class="container">
+        <h1 class="header-title">Flip 7 Scorekeeper</h1>
+        <p style="text-align:center; margin-bottom:1rem; color:var(--text-muted);">First to 200 points wins!</p>
+        
+        <input type="text" id="new-player-name" placeholder="Enter player name..." autocomplete="off">
+        <button class="btn-primary" onclick="addPlayer()">Add Player</button>
+        
+        <ul id="setup-player-list" class="player-list"></ul>
+        
+        <button id="start-btn" class="btn-primary mt-4" style="background-color: var(--mod-active);" onclick="startGame()" disabled>Start Game</button>
+    </div>
+
+    <!-- Game Screen -->
+    <div id="game-screen" class="hidden">
+        <h2 class="header-title" style="margin-bottom: 0.5rem;">Scoreboard</h2>
+        <p style="text-align:center; color:var(--text-muted); margin-bottom:1.5rem;">Tap a player to calculate their round.</p>
+        
+        <div id="scoreboard-list" class="scoreboard"></div>
+        
+        <button class="btn-outline mt-4" onclick="location.reload()">Reset Entire Game</button>
+    </div>
+
+    <!-- Calculator Modal -->
+    <div id="calc-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h2 id="calc-player-name" style="margin-bottom: 1.5rem;">Player Name</h2>
+            
+            <button id="btn-bust" class="bust-btn" onclick="toggleBust()">💥 I Busted! (0 pts)</button>
+
+            <div class="calc-section">
+                <h4>Number Cards (Max 7)</h4>
+                <div class="btn-grid" style="grid-template-columns: repeat(5, 1fr);">
+                    <!-- 0 to 12 -->
+                    <button class="toggle-btn num-btn" id="btn-num-0" onclick="toggleNumber(0)">0</button>
+                    <button class="toggle-btn num-btn" id="btn-num-1" onclick="toggleNumber(1)">1</button>
+                    <button class="toggle-btn num-btn" id="btn-num-2" onclick="toggleNumber(2)">2</button>
+                    <button class="toggle-btn num-btn" id="btn-num-3" onclick="toggleNumber(3)">3</button>
+                    <button class="toggle-btn num-btn" id="btn-num-4" onclick="toggleNumber(4)">4</button>
+                    <button class="toggle-btn num-btn" id="btn-num-5" onclick="toggleNumber(5)">5</button>
+                    <button class="toggle-btn num-btn" id="btn-num-6" onclick="toggleNumber(6)">6</button>
+                    <button class="toggle-btn num-btn" id="btn-num-7" onclick="toggleNumber(7)">7</button>
+                    <button class="toggle-btn num-btn" id="btn-num-8" onclick="toggleNumber(8)">8</button>
+                    <button class="toggle-btn num-btn" id="btn-num-9" onclick="toggleNumber(9)">9</button>
+                    <button class="toggle-btn num-btn" id="btn-num-10" onclick="toggleNumber(10)">10</button>
+                    <button class="toggle-btn num-btn" id="btn-num-11" onclick="toggleNumber(11)">11</button>
+                    <button class="toggle-btn num-btn" id="btn-num-12" onclick="toggleNumber(12)">12</button>
+                </div>
+            </div>
+
+            <div class="calc-section">
+                <h4>Score Modifiers</h4>
+                <div class="btn-grid" style="grid-template-columns: repeat(3, 1fr);">
+                    <button class="toggle-btn mod-btn" id="btn-mod-plus2" onclick="toggleModifier('+2')">+2</button>
+                    <button class="toggle-btn mod-btn" id="btn-mod-plus4" onclick="toggleModifier('+4')">+4</button>
+                    <button class="toggle-btn mod-btn" id="btn-mod-plus6" onclick="toggleModifier('+6')">+6</button>
+                    <button class="toggle-btn mod-btn" id="btn-mod-plus8" onclick="toggleModifier('+8')">+8</button>
+                    <button class="toggle-btn mod-btn" id="btn-mod-plus10" onclick="toggleModifier('+10')">+10</button>
+                    <button class="toggle-btn x2-btn" id="btn-mod-x2" onclick="toggleModifier('x2')">x2</button>
+                </div>
+            </div>
+
+            <div id="math-breakdown" class="math-breakdown">
+                <!-- Live math appears here -->
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn-outline" onclick="closeCalc()">Cancel</button>
+                <button id="btn-save-score" class="btn-primary" onclick="saveScore()">Save Score</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let players = [];
+        let currentPlayerId = null;
+        let nextPlayerId = 1;
+
+        let calcState = {
+            numbers: new Set(),
+            modifiers: new Set(),
+            busted: false
+        };
+
+        // Listen for "Enter" key on player setup
+        document.getElementById('new-player-name').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') addPlayer();
+        });
+
+        // Setup 
+        function addPlayer() {
+            const input = document.getElementById('new-player-name');
+            const name = input.value.trim();
+            if (name) {
+                players.push({ id: nextPlayerId++, name: name, scores: [] });
+                input.value = '';
+                renderSetupList();
+            }
+        }
+
+        function removePlayer(id) {
+            players = players.filter(p => p.id !== id);
+            renderSetupList();
+        }
+
+        function renderSetupList() {
+            const list = document.getElementById('setup-player-list');
+            list.innerHTML = '';
+            players.forEach(p => {
+                const li = document.createElement('li');
+                li.innerHTML = `<span>${p.name}</span> <button class="remove-btn" onclick="removePlayer(${p.id})">✖ Remove</button>`;
+                list.appendChild(li);
+            });
+            document.getElementById('start-btn').disabled = players.length === 0;
+        }
+
+        function startGame() {
+            if (players.length === 0) return;
+            document.getElementById('setup-screen').classList.add('hidden');
+            document.getElementById('game-screen').classList.remove('hidden');
+            renderScoreboard();
+        }
+
+        // Game / Scoreboard
+        function getTotal(player) {
+            return player.scores.reduce((a, b) => a + b, 0);
+        }
+
+        function renderScoreboard() {
+            const board = document.getElementById('scoreboard-list');
+            board.innerHTML = '';
+            
+            // Sort to keep the leader at the top
+            let sortedPlayers = [...players].sort((a,b) => getTotal(b) - getTotal(a));
+
+            sortedPlayers.forEach(p => {
+                const total = getTotal(p);
+                const card = document.createElement('div');
+                card.className = 'player-card';
+                card.onclick = (e) => {
+                    if(e.target.className === 'undo-btn') return; // prevent opening when hitting undo
+                    openCalc(p.id);
+                };
+                
+                let undoHtml = p.scores.length > 0 
+                    ? `<button class="undo-btn" onclick="undoLastScore(${p.id}, event)">Undo Last (${p.scores[p.scores.length-1]})</button>` 
+                    : '';
+
+                card.innerHTML = `
+                    <div class="player-info">
+                        <span class="player-name">${p.name}</span>
+                        <span class="player-score">${total} <span style="font-size:1.1rem; color:var(--text-muted); font-weight:500;">pts</span></span>
+                    </div>
+                    <div class="score-actions">
+                        <div class="tap-hint">+ Add Score</div>
+                        ${undoHtml}
+                    </div>
+                `;
+                board.appendChild(card);
+            });
+        }
+
+        function undoLastScore(id, event) {
+            event.stopPropagation();
+            const p = players.find(p => p.id === id);
+            if (p && p.scores.length > 0) {
+                if(confirm(`Are you sure you want to undo the last entry of ${p.scores[p.scores.length-1]} pts for ${p.name}?`)) {
+                    p.scores.pop();
+                    renderScoreboard();
+                }
+            }
+        }
+
+        // Calculator 
+        function openCalc(id) {
+            currentPlayerId = id;
+            const p = players.find(p => p.id === id);
+            document.getElementById('calc-player-name').innerText = p.name;
+            
+            // Reset modal state
+            calcState.numbers.clear();
+            calcState.modifiers.clear();
+            calcState.busted = false;
+            
+            renderCalcButtons();
+            updateCalcMath();
+            
+            document.getElementById('calc-modal').classList.add('active');
+        }
+
+        function closeCalc() {
+            document.getElementById('calc-modal').classList.remove('active');
+        }
+
+        function toggleNumber(num) {
+            if (calcState.busted) return;
+            
+            if (calcState.numbers.has(num)) {
+                calcState.numbers.delete(num);
+            } else {
+                if (calcState.numbers.size >= 7) {
+                    alert("Maximum of 7 unique numbers reached! You've hit the Flip 7 Bonus.");
+                    return;
+                }
+                calcState.numbers.add(num);
+            }
+            renderCalcButtons();
+            updateCalcMath();
+        }
+
+        function toggleModifier(mod) {
+            if (calcState.busted) return;
+            
+            if (calcState.modifiers.has(mod)) {
+                calcState.modifiers.delete(mod);
+            } else {
+                calcState.modifiers.add(mod);
+            }
+            renderCalcButtons();
+            updateCalcMath();
+        }
+
+        function toggleBust() {
+            calcState.busted = !calcState.busted;
+            renderCalcButtons();
+            updateCalcMath();
+        }
+
+        function renderCalcButtons() {
+            // Update Numbers
+            for (let i = 0; i <= 12; i++) {
+                const btn = document.getElementById(`btn-num-${i}`);
+                if (calcState.numbers.has(i)) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+                btn.style.opacity = calcState.busted ? '0.3' : '1';
+            }
+            
+            // Update Modifiers
+            const mods = ['+2', '+4', '+6', '+8', '+10', 'x2'];
+            mods.forEach(m => {
+                let safeId = m === 'x2' ? 'x2' : 'plus' + m.replace('+','');
+                const btn = document.getElementById(`btn-mod-${safeId}`);
+                if (calcState.modifiers.has(m)) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+                btn.style.opacity = calcState.busted ? '0.3' : '1';
+            });
+
+            // Update Bust Button
+            const bustBtn = document.getElementById('btn-bust');
+            if (calcState.busted) {
+                bustBtn.classList.add('active');
+                bustBtn.innerText = "💥 BUSTED! (Hand scores 0)";
+            } else {
+                bustBtn.classList.remove('active');
+                bustBtn.innerText = "💥 I Busted!";
+            }
+        }
+
+        function updateCalcMath() {
+            const mathDiv = document.getElementById("math-breakdown");
+            const btnSave = document.getElementById("btn-save-score");
+            
+            // Handle Bust
+            if (calcState.busted) {
+                mathDiv.innerHTML = "<div style='color:var(--bust-color); font-weight:bold; font-size:1.1rem; text-align:center;'>Player busted! Round scores 0.</div>";
+                btnSave.innerText = "Save: 0 pts";
+                btnSave.dataset.score = 0;
+                return;
+            }
+
+            // Empty state
+            if (calcState.numbers.size === 0 && calcState.modifiers.size === 0) {
+                mathDiv.innerHTML = "<div style='color:var(--text-muted); text-align:center;'>Select cards to calculate score...</div>";
+                btnSave.innerText = "Save: 0 pts";
+                btnSave.dataset.score = 0;
+                return;
+            }
+
+            // Base Sum
+            let sum = 0;
+            let numbersArr = Array.from(calcState.numbers).sort((a,b) => a-b);
+            for(let n of numbersArr) sum += n;
+            
+            let html = `<div>Numbers: ${numbersArr.join(' + ')} ${numbersArr.length > 1 ? '=' : ''} <b>${sum}</b></div>`;
+            if (numbersArr.length === 0) html = `<div>Numbers: <b>0</b></div>`;
+            
+            let subtotal = sum;
+            
+            // Multiplier applies to base sum only
+            if (calcState.modifiers.has('x2')) {
+                html += `<div>Multiplier: ${subtotal} x 2 = <b>${subtotal * 2}</b></div>`;
+                subtotal *= 2;
+            }
+            
+            // Addition Modifiers
+            let addMods = 0;
+            let modArr = [];
+            ['+2', '+4', '+6', '+8', '+10'].forEach(m => {
+                if (calcState.modifiers.has(m)) {
+                    let val = parseInt(m.replace('+',''));
+                    addMods += val;
+                    modArr.push(m);
+                }
+            });
+            
+            if (addMods > 0) {
+                html += `<div>Modifiers: ${subtotal} + ${modArr.join(' + ')} = <b>${subtotal + addMods}</b></div>`;
+                subtotal += addMods;
+            }
+            
+            // Flip 7 Jackpot (7 unique numbers)
+            if (calcState.numbers.size === 7) {
+                html += `<div style="color:var(--primary-hover); font-weight:bold;">✨ Flip 7 Bonus: ${subtotal} + 15 = <b>${subtotal + 15}</b></div>`;
+                subtotal += 15;
+            }
+            
+            mathDiv.innerHTML = html;
+            btnSave.innerText = `Save: ${subtotal} pts`;
+            btnSave.dataset.score = subtotal;
+        }
+
+        function saveScore() {
+            const p = players.find(p => p.id === currentPlayerId);
+            if(!p) return;
+            
+            let scoreToSave = 0;
+            if (!calcState.busted) {
+                scoreToSave = parseInt(document.getElementById("btn-save-score").dataset.score) || 0;
+            }
+            
+            p.scores.push(scoreToSave);
+            closeCalc();
+            renderScoreboard();
+            
+            // Check for game end condition (target 200+)
+            if (getTotal(p) >= 200) {
+                setTimeout(() => alert(`🏆 ${p.name} has crossed 200 points!`), 150);
+            }
+        }
+    </script>
+</body>
+</html>
