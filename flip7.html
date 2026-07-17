@@ -79,7 +79,8 @@
         button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
         .btn-primary { background-color: var(--primary); color: white; }
-        .btn-outline { background-color: transparent; border: 2px solid var(--text-muted); color: var(--text-muted); }
+        .btn-outline { background-color: transparent; border: 2px solid var(--bust-color); color: var(--bust-color); }
+        .btn-outline-gray { background-color: transparent; border: 2px solid var(--text-muted); color: var(--text-muted); }
 
         .player-list { list-style: none; margin: 1rem 0; }
         .player-list li {
@@ -253,7 +254,6 @@
 
         /* Utilities */
         .hidden { display: none !important; }
-        .text-center { text-align: center; }
         .mt-4 { margin-top: 1.5rem; }
     </style>
 </head>
@@ -279,7 +279,7 @@
         
         <div id="scoreboard-list" class="scoreboard"></div>
         
-        <button class="btn-outline mt-4" onclick="location.reload()">Reset Entire Game</button>
+        <button class="btn-outline mt-4" onclick="startNewGame()">Start New Game (Clear Data)</button>
     </div>
 
     <!-- Calculator Modal -->
@@ -326,7 +326,7 @@
             </div>
 
             <div class="modal-actions">
-                <button class="btn-outline" onclick="closeCalc()">Cancel</button>
+                <button class="btn-outline-gray" onclick="closeCalc()">Cancel</button>
                 <button id="btn-save-score" class="btn-primary" onclick="saveScore()">Save Score</button>
             </div>
         </div>
@@ -343,6 +343,49 @@
             busted: false
         };
 
+        // --- LocalStorage Caching Functions ---
+        function saveGameState() {
+            const state = {
+                players: players,
+                nextPlayerId: nextPlayerId,
+                isGameStarted: !document.getElementById('game-screen').classList.contains('hidden')
+            };
+            localStorage.setItem('flip7GameCache', JSON.stringify(state));
+        }
+
+        function loadGameState() {
+            const savedData = localStorage.getItem('flip7GameCache');
+            if (savedData) {
+                const state = JSON.parse(savedData);
+                players = state.players || [];
+                nextPlayerId = state.nextPlayerId || 1;
+                
+                if (state.isGameStarted) {
+                    document.getElementById('setup-screen').classList.add('hidden');
+                    document.getElementById('game-screen').classList.remove('hidden');
+                    renderScoreboard();
+                } else {
+                    renderSetupList();
+                }
+            }
+        }
+        
+        // Load data immediately on page load
+        window.onload = loadGameState;
+
+        function startNewGame() {
+            if (confirm("Are you sure you want to clear all data and start a new game? This cannot be undone.")) {
+                localStorage.removeItem('flip7GameCache');
+                players = [];
+                nextPlayerId = 1;
+                
+                document.getElementById('game-screen').classList.add('hidden');
+                document.getElementById('setup-screen').classList.remove('hidden');
+                renderSetupList();
+            }
+        }
+        // ----------------------------------------
+
         // Listen for "Enter" key on player setup
         document.getElementById('new-player-name').addEventListener('keypress', function (e) {
             if (e.key === 'Enter') addPlayer();
@@ -356,12 +399,14 @@
                 players.push({ id: nextPlayerId++, name: name, scores: [] });
                 input.value = '';
                 renderSetupList();
+                saveGameState(); // Save cache
             }
         }
 
         function removePlayer(id) {
             players = players.filter(p => p.id !== id);
             renderSetupList();
+            saveGameState(); // Save cache
         }
 
         function renderSetupList() {
@@ -380,6 +425,7 @@
             document.getElementById('setup-screen').classList.add('hidden');
             document.getElementById('game-screen').classList.remove('hidden');
             renderScoreboard();
+            saveGameState(); // Save cache
         }
 
         // Game / Scoreboard
@@ -428,6 +474,7 @@
                 if(confirm(`Are you sure you want to undo the last entry of ${p.scores[p.scores.length-1]} pts for ${p.name}?`)) {
                     p.scores.pop();
                     renderScoreboard();
+                    saveGameState(); // Save cache
                 }
             }
         }
@@ -598,6 +645,7 @@
             p.scores.push(scoreToSave);
             closeCalc();
             renderScoreboard();
+            saveGameState(); // Save cache
             
             // Check for game end condition (target 200+)
             if (getTotal(p) >= 200) {
